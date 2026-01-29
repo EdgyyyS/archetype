@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ARCHETYPE | High Ticket System</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-black text-white">
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState } = React;
+
+const App = () => {
+  const [step, setStep] = useState(1);
+  const [answers, setAnswers] = useState({});
+  const [chat, setChat] = useState([]);
+  const [input, setInput] = useState("");
+
+  const sendAI = async (msg) => {
+    const res = await fetch("/api/ai", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({
+        messages:[...chat, { role:"user", text: msg }]
+      })
+    });
+    return await res.json();
+  };
+
+  const handleChat = async (e) => {
+    e.preventDefault();
+    const userMsg = input;
+    setChat([...chat, { role:"user", text:userMsg }]);
+    setInput("");
+    const data = await sendAI(userMsg);
+    setChat(c => [...c, { role:"model", text:data.reply }]);
+    if (data.reply.includes("ACESSO LIBERADO")) setStep(4);
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center p-10">
+      {step===1 && (
+        <div className="max-w-xl text-center">
+          <h1 className="text-4xl font-bold mb-6">Verificação de Elegibilidade</h1>
+          <p className="opacity-60 mb-10">Este sistema não é para todos.</p>
+          <button onClick={()=>setStep(2)} className="px-10 py-4 bg-white text-black uppercase">Iniciar Diagnóstico</button>
+        </div>
+      )}
+
+      {step===2 && (
+        <div className="max-w-xl space-y-6">
+          <h2 className="text-2xl font-bold">Auto‑Qualificação</h2>
+          <input placeholder="Qual seu principal objetivo?" className="w-full p-4 bg-neutral-900"
+            onChange={e=>setAnswers({...answers, goal:e.target.value})}/>
+          <input placeholder="Já investiu em mentoria ou imagem?" className="w-full p-4 bg-neutral-900"
+            onChange={e=>setAnswers({...answers, invest:e.target.value})}/>
+          <button onClick={()=>setStep(3)} className="w-full py-4 bg-white text-black">Continuar</button>
+        </div>
+      )}
+
+      {step===3 && (
+        <div className="w-full max-w-xl">
+          <h2 className="mb-4 font-bold">Triagem Estratégica IA</h2>
+          <div className="h-64 overflow-y-auto border border-white/20 p-4 mb-4">
+            {chat.map((m,i)=>(
+              <div key={i} className={m.role==="user"?"text-right mb-2":"text-left mb-2 opacity-70"}>{m.text}</div>
+            ))}
+          </div>
+          <form onSubmit={handleChat}>
+            <input value={input} onChange={e=>setInput(e.target.value)}
+              className="w-full p-4 bg-neutral-900" placeholder="Responda com clareza..." />
+          </form>
+        </div>
+      )}
+
+      {step===4 && (
+        <div className="max-w-xl space-y-6">
+          <h2 className="text-3xl font-bold">Acesso Liberado</h2>
+          <p className="opacity-60">Solicite sua Sessão Estratégica.</p>
+          <form action="/api/schedule">
+            <input name="name" required placeholder="Nome" className="w-full p-4 bg-neutral-900"/>
+            <input type="date" name="date" required className="w-full p-4 bg-neutral-900"/>
+            <input type="time" name="time" required className="w-full p-4 bg-neutral-900"/>
+            <button className="w-full py-4 bg-white text-black">Confirmar Sessão</button>
+          </form>
+        </div>
+      )}
+    </div>
+  );
+};
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
